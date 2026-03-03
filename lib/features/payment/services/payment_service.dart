@@ -3,6 +3,10 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/payment_models.dart';
 import 'backend_api_service.dart';
+import 'local_storage_service.dart';
+import 'subscription_service.dart';
+import 'local_notification_service.dart';
+import '../../../models/order_detail.dart';
 
 /// PaymentService orchestrates payment operations using Razorpay SDK.
 ///
@@ -20,6 +24,9 @@ class PaymentService {
   late Razorpay _razorpay;
   final BackendApiService _backendApi;
   final SharedPreferences _prefs;
+  final LocalStorageService _localStorageService;
+  final SubscriptionService _subscriptionService;
+  final LocalNotificationService _localNotificationService;
 
   // SECURITY: Only Key_ID is stored in client
   // Key_Secret MUST NEVER be in this code
@@ -47,8 +54,14 @@ class PaymentService {
   PaymentService({
     required BackendApiService backendApi,
     required SharedPreferences prefs,
+    required LocalStorageService localStorageService,
+    required SubscriptionService subscriptionService,
+    required LocalNotificationService localNotificationService,
   })  : _backendApi = backendApi,
-        _prefs = prefs {
+        _prefs = prefs,
+        _localStorageService = localStorageService,
+        _subscriptionService = subscriptionService,
+        _localNotificationService = localNotificationService {
     _initializeRazorpay();
   }
 
@@ -92,6 +105,26 @@ class PaymentService {
     _paymentCompleter = Completer<PaymentResult>();
     
     try {
+      // Step 0: Create local order first (local-first architecture)
+      final localOrderId = 'order_${DateTime.now().millisecondsSinceEpoch}';
+      final currentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      
+      final localOrder = OrderDetail(
+        orderId: localOrderId,
+        amount: amount * 100, // Convert rupees to paise
+        currency: 'INR',
+        status: 'pending',
+        createdAt: currentTimestamp,
+        updatedAt: currentTimestamp,
+        isSynced: false,
+      );
+      
+      // Save to local storage before any network operations
+      await _localStorageService.saveOrder(localOrder);
+      
+      // Establish subscription before payment is initiated
+      await _subscriptionService.subscribeToOrder(localOrderId);
+      
       onStatus?.call('Creating order with backend...');
       
       // Step 1: Create order via backend (backend uses Key_Secret)
@@ -142,34 +175,116 @@ class PaymentService {
 
   /// Handle successful payment callback from Razorpay.
   ///
-  /// Captures payment_id, order_id, and signature for verification.
-  /// Persists payment details to local storage for recovery.
-  /// Auto-verifies payment with backend.
+  /// IMPORTANT: This callback is NOT trusted as the source of truth.
+  /// The webhook is the authoritative source for payment status.
+  ///
+  /// Flow:
+  /// 1. Show "Verifying payment..." message to user
+  /// 2. Wait up to 20 seconds for subscription update from webhook
+  /// 3. If timeout, fallback to polling getOrderStatus
+  /// 4. Update local storage with final status
+  ///
+  /// Requirements: 3.3, 3.4, 3.7, 3.8, 3.9
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    final result = PaymentResult.success(
-      paymentId: response.paymentId ?? '',
-      orderId: response.orderId ?? '',
-      signature: response.signature ?? '',
-    );
-    _lastResult = result;
+    final orderId = response.orderId ?? '';
+    final paymentId = response.paymentId ?? '';
+    final signature = response.signature ?? '';
 
-    await _savePaymentId(response.paymentId ?? '');
-    await _savePaymentStatus(PaymentStatus.success);
+    await _savePaymentId(paymentId);
 
-    // Auto-verify payment with backend
-    try {
-      await _backendApi.verifyPayment(
-        orderId: response.orderId ?? '',
-        paymentId: response.paymentId ?? '',
-        signature: response.signature ?? '',
+    // Task 9.4: Show "Verifying payment..." state
+    // Do NOT mark order as paid based on Razorpay callback
+    print('💳 Razorpay callback received - Verifying payment...');
+    
+    // Task 9.5: Wait up to 20 seconds for subscription update
+    final verificationResult = await _waitForSubscriptionUpdate(orderId);
+    
+    if (verificationResult != null) {
+      // Subscription updated the order successfully
+      print('✅ Payment verified via subscription: ${verificationResult.status}');
+      
+      final result = PaymentResult.success(
+        paymentId: paymentId,
+        orderId: orderId,
+        signature: signature,
       );
-      print('✅ Payment verified successfully');
-    } catch (e) {
-      print('⚠️ Payment verification failed: $e');
-      // Verification failure is non-fatal, payment still succeeded
+      _lastResult = result;
+      await _savePaymentStatus(PaymentStatus.success);
+      _paymentCompleter?.complete(result);
+    } else {
+      // Timeout - fallback to polling
+      print('⏱️ Subscription timeout - Falling back to polling');
+      
+      try {
+        final polledOrder = await _backendApi.getOrderStatus(orderId: orderId);
+        
+        // Update local storage with polled status
+        await _localStorageService.updateOrder(polledOrder);
+        
+        print('✅ Payment status polled: ${polledOrder.status}');
+        
+        if (polledOrder.status == 'paid') {
+          final result = PaymentResult.success(
+            paymentId: paymentId,
+            orderId: orderId,
+            signature: signature,
+          );
+          _lastResult = result;
+          await _savePaymentStatus(PaymentStatus.success);
+          _paymentCompleter?.complete(result);
+        } else {
+          final result = PaymentResult.failure(
+            orderId: orderId,
+            errorCode: 'PAYMENT_NOT_CONFIRMED',
+            errorDescription: 'Payment status: ${polledOrder.status}',
+          );
+          _lastResult = result;
+          await _savePaymentStatus(PaymentStatus.failed);
+          _paymentCompleter?.completeError(result);
+        }
+      } catch (e) {
+        print('❌ Polling failed: $e');
+        
+        final result = PaymentResult.failure(
+          orderId: orderId,
+          errorCode: 'VERIFICATION_FAILED',
+          errorDescription: 'Unable to verify payment. Please check status manually.',
+        );
+        _lastResult = result;
+        await _savePaymentStatus(PaymentStatus.failed);
+        _paymentCompleter?.completeError(result);
+      }
     }
+  }
 
-    _paymentCompleter?.complete(result);
+  /// Wait up to 20 seconds for subscription to update the order
+  ///
+  /// Returns the updated OrderDetail if subscription updates within timeout,
+  /// null if timeout expires.
+  ///
+  /// Requirements: 3.7, 8.5
+  Future<OrderDetail?> _waitForSubscriptionUpdate(String orderId) async {
+    const timeoutDuration = Duration(seconds: 20);
+    const pollInterval = Duration(milliseconds: 500);
+    
+    final startTime = DateTime.now();
+    
+    while (DateTime.now().difference(startTime) < timeoutDuration) {
+      // Check if order status has been updated by subscription
+      final currentOrder = await _localStorageService.getOrder(orderId);
+      
+      if (currentOrder != null && 
+          (currentOrder.status == 'paid' || currentOrder.status == 'failed')) {
+        // Subscription has updated the order to final status
+        return currentOrder;
+      }
+      
+      // Wait before checking again
+      await Future.delayed(pollInterval);
+    }
+    
+    // Timeout expired
+    return null;
   }
 
   /// Handle payment error callback from Razorpay.

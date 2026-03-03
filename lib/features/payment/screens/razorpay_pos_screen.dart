@@ -8,6 +8,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/payment_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/local_storage_service.dart';
+import '../services/subscription_service.dart';
+import '../services/local_notification_service.dart';
 import '../models/payment_models.dart';
 
 class RazorpayPosScreen extends StatefulWidget {
@@ -67,9 +70,27 @@ class _RazorpayPosScreenState extends State<RazorpayPosScreen>
         useMockMode: false,
       );
 
+      // Initialize local storage service
+      final localStorageService = LocalStorageService();
+      await localStorageService.initialize();
+
+      // Initialize notification service
+      final localNotificationService = LocalNotificationService();
+      await localNotificationService.initialize();
+
+      // Initialize subscription service
+      final subscriptionService = SubscriptionService(
+        localStorageService: localStorageService,
+        localNotificationService: localNotificationService,
+      );
+
+      // Initialize payment service with all dependencies
       final paymentService = PaymentService(
         backendApi: backendApi,
         prefs: prefs,
+        localStorageService: localStorageService,
+        subscriptionService: subscriptionService,
+        localNotificationService: localNotificationService,
       );
 
       setState(() {

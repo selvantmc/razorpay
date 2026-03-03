@@ -35,11 +35,11 @@ void main() {
         amount: 10050,
         status: 'created',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.paymentId, isNull);
       expect(order.signature, isNull);
-      expect(order.updatedAt, isNull);
       expect(order.customerName, isNull);
       expect(order.customerEmail, isNull);
       expect(order.customerPhone, isNull);
@@ -53,6 +53,7 @@ void main() {
         amount: 10050,
         status: 'paid',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.formattedAmount, '₹100.50');
@@ -64,6 +65,7 @@ void main() {
         amount: 10000,
         status: 'paid',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.formattedAmount, '₹100.00');
@@ -75,6 +77,7 @@ void main() {
         amount: 0,
         status: 'created',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.formattedAmount, '₹0.00');
@@ -86,6 +89,7 @@ void main() {
         amount: 123456789,
         status: 'paid',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.formattedAmount, '₹1234567.89');
@@ -99,6 +103,7 @@ void main() {
         amount: 10050,
         status: 'paid',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, false);
@@ -110,6 +115,7 @@ void main() {
         amount: 10050,
         status: 'captured',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, false);
@@ -121,6 +127,7 @@ void main() {
         amount: 10050,
         status: 'verified',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, false);
@@ -132,6 +139,7 @@ void main() {
         amount: 10050,
         status: 'created',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, true);
@@ -143,6 +151,7 @@ void main() {
         amount: 10050,
         status: 'pending',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, true);
@@ -154,6 +163,7 @@ void main() {
         amount: 10050,
         status: 'failed',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, true);
@@ -165,6 +175,7 @@ void main() {
         amount: 10050,
         status: 'unknown',
         createdAt: 1705320600,
+        updatedAt: 1705320600,
       );
 
       expect(order.needsAction, true);
@@ -179,6 +190,7 @@ void main() {
         amount: 10050,
         status: 'paid',
         createdAt: 1705329000,
+        updatedAt: 1705329000,
       );
 
       // The format should be DD/MM/YYYY HH:MM
@@ -192,11 +204,115 @@ void main() {
         amount: 10050,
         status: 'paid',
         createdAt: 1704715800, // January 8, 2024
+        updatedAt: 1704715800,
       );
 
       final formatted = order.formattedCreatedAt;
       // Should have format DD/MM/YYYY HH:MM with padded zeros
       expect(formatted, matches(r'\d{2}/\d{2}/\d{4} \d{2}:\d{2}'));
+    });
+  });
+
+  group('OrderDetail - copyWith', () {
+    test('creates copy with updated status', () {
+      final original = OrderDetail(
+        orderId: 'order_123',
+        amount: 10050,
+        status: 'created',
+        createdAt: 1705320600,
+        updatedAt: 1705320600,
+      );
+
+      final updated = original.copyWith(status: 'paid');
+
+      expect(updated.status, 'paid');
+      expect(updated.orderId, original.orderId);
+      expect(updated.amount, original.amount);
+      expect(updated.createdAt, original.createdAt);
+    });
+
+    test('creates copy with multiple updated fields', () {
+      final original = OrderDetail(
+        orderId: 'order_123',
+        amount: 10050,
+        status: 'created',
+        createdAt: 1705320600,
+        updatedAt: 1705320600,
+      );
+
+      final updated = original.copyWith(
+        status: 'paid',
+        paymentId: 'pay_456',
+        signature: 'sig_789',
+        updatedAt: 1705320700,
+        isSynced: true,
+      );
+
+      expect(updated.status, 'paid');
+      expect(updated.paymentId, 'pay_456');
+      expect(updated.signature, 'sig_789');
+      expect(updated.updatedAt, 1705320700);
+      expect(updated.isSynced, true);
+      expect(updated.orderId, original.orderId);
+      expect(updated.amount, original.amount);
+    });
+
+    test('creates copy with no changes when no parameters provided', () {
+      final original = OrderDetail(
+        orderId: 'order_123',
+        amount: 10050,
+        status: 'paid',
+        createdAt: 1705320600,
+        updatedAt: 1705320600,
+        customerName: 'John Doe',
+      );
+
+      final copy = original.copyWith();
+
+      expect(copy.orderId, original.orderId);
+      expect(copy.amount, original.amount);
+      expect(copy.status, original.status);
+      expect(copy.createdAt, original.createdAt);
+      expect(copy.updatedAt, original.updatedAt);
+      expect(copy.customerName, original.customerName);
+    });
+
+    test('creates copy with updated customer information', () {
+      final original = OrderDetail(
+        orderId: 'order_123',
+        amount: 10050,
+        status: 'created',
+        createdAt: 1705320600,
+        updatedAt: 1705320600,
+      );
+
+      final updated = original.copyWith(
+        customerName: 'Jane Smith',
+        customerEmail: 'jane@example.com',
+        customerPhone: '8888888888',
+      );
+
+      expect(updated.customerName, 'Jane Smith');
+      expect(updated.customerEmail, 'jane@example.com');
+      expect(updated.customerPhone, '8888888888');
+      expect(updated.orderId, original.orderId);
+    });
+
+    test('creates copy with updated sync status', () {
+      final original = OrderDetail(
+        orderId: 'order_123',
+        amount: 10050,
+        status: 'paid',
+        createdAt: 1705320600,
+        updatedAt: 1705320600,
+        isSynced: false,
+      );
+
+      final updated = original.copyWith(isSynced: true);
+
+      expect(updated.isSynced, true);
+      expect(updated.orderId, original.orderId);
+      expect(updated.status, original.status);
     });
   });
 
@@ -245,7 +361,7 @@ void main() {
       expect(order.createdAt, 1705320600);
       expect(order.paymentId, isNull);
       expect(order.signature, isNull);
-      expect(order.updatedAt, isNull);
+      expect(order.updatedAt, 0); // updatedAt is required, defaults to 0
       expect(order.customerName, isNull);
       expect(order.customerEmail, isNull);
       expect(order.customerPhone, isNull);

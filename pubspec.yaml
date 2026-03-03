@@ -18,6 +18,11 @@ dependencies:
   shared_preferences: ^2.2.2
   http: ^1.1.0
   flutter_animate: ^4.5.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_local_notifications: ^17.0.0
+  amplify_api: ^2.0.0
+  amplify_flutter: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -26,6 +31,7 @@ dev_dependencies:
   mockito: ^5.4.4
   build_runner: ^2.4.8
   faker: ^2.1.0
+  hive_generator: ^2.0.1
 
 flutter:
   uses-material-design: true

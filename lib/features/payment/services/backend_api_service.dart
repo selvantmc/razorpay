@@ -6,6 +6,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/payment_models.dart';
+import '../../../models/order_detail.dart';
 
 /// Backend API service for secure payment operations
 ///
@@ -201,6 +202,59 @@ class BackendApiService {
       }
     } catch (e) {
       throw Exception('Status check failed: $e');
+    }
+  }
+
+  /// Get order status from backend
+  ///
+  /// AWS Lambda endpoint: /selvan/get-order-status
+  ///
+  /// The backend will:
+  /// 1. Receive orderId from client
+  /// 2. Query DynamoDB or Razorpay API for current status
+  /// 3. Return OrderDetail with current status and updatedAt
+  ///
+  /// This method provides a fallback mechanism to poll order status when
+  /// subscriptions timeout or fail. It queries the backend for the current
+  /// order status.
+  ///
+  /// SECURITY: Backend queries require Key_Secret on backend
+  Future<OrderDetail> getOrderStatus({required String orderId}) async {
+    if (useMockMode) {
+      // MOCK MODE - For testing only
+      await Future.delayed(const Duration(milliseconds: 400));
+      
+      return OrderDetail(
+        orderId: orderId,
+        razorpayOrderId: 'rzp_mock_${DateTime.now().millisecondsSinceEpoch}',
+        amount: 10000, // ₹100.00 in paise
+        currency: 'INR',
+        status: 'paid',
+        paymentId: 'pay_mock_${DateTime.now().millisecondsSinceEpoch}',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        updatedAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        isSynced: true,
+      );
+    }
+
+    // PRODUCTION MODE - Real AWS Lambda API call
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/selvan/get-order-status?orderId=$orderId'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Request timed out. Please try again.'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return OrderDetail.fromJson(data);
+      } else {
+        throw Exception('Failed to get order status: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Get order status failed: $e');
     }
   }
 

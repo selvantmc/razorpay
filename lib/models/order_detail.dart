@@ -1,23 +1,59 @@
+import 'package:hive/hive.dart';
+
+part 'order_detail.g.dart';
+
+@HiveType(typeId: 0)
 class OrderDetail {
+  @HiveField(0)
   final String orderId;
+  
+  @HiveField(1)
+  final String? razorpayOrderId;
+  
+  @HiveField(2)
   final int amount; // in paise
+  
+  @HiveField(3)
+  final String currency;
+  
+  @HiveField(4)
   final String status;
+  
+  @HiveField(5)
   final String? paymentId;
+  
+  @HiveField(6)
   final String? signature;
+  
+  @HiveField(7)
   final int createdAt; // Unix timestamp
-  final int? updatedAt; // Unix timestamp
+  
+  @HiveField(8)
+  final int updatedAt; // Unix timestamp (now required)
+  
+  @HiveField(9)
+  final bool isSynced;
+  
+  @HiveField(10)
   final String? customerName;
+  
+  @HiveField(11)
   final String? customerEmail;
+  
+  @HiveField(12)
   final String? customerPhone;
 
   OrderDetail({
     required this.orderId,
+    this.razorpayOrderId,
     required this.amount,
+    this.currency = 'INR',
     required this.status,
     this.paymentId,
     this.signature,
     required this.createdAt,
-    this.updatedAt,
+    required this.updatedAt,
+    this.isSynced = false,
     this.customerName,
     this.customerEmail,
     this.customerPhone,
@@ -44,6 +80,39 @@ class OrderDetail {
     return '$day/$month/$year $hour:$minute';
   }
 
+  /// Creates a copy of this OrderDetail with the given fields replaced with new values
+  OrderDetail copyWith({
+    String? orderId,
+    String? razorpayOrderId,
+    int? amount,
+    String? currency,
+    String? status,
+    String? paymentId,
+    String? signature,
+    int? createdAt,
+    int? updatedAt,
+    bool? isSynced,
+    String? customerName,
+    String? customerEmail,
+    String? customerPhone,
+  }) {
+    return OrderDetail(
+      orderId: orderId ?? this.orderId,
+      razorpayOrderId: razorpayOrderId ?? this.razorpayOrderId,
+      amount: amount ?? this.amount,
+      currency: currency ?? this.currency,
+      status: status ?? this.status,
+      paymentId: paymentId ?? this.paymentId,
+      signature: signature ?? this.signature,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isSynced: isSynced ?? this.isSynced,
+      customerName: customerName ?? this.customerName,
+      customerEmail: customerEmail ?? this.customerEmail,
+      customerPhone: customerPhone ?? this.customerPhone,
+    );
+  }
+
   /// Factory constructor for parsing JSON with null-safe defaults
   /// Factory constructor for parsing JSON with null-safe defaults
 factory OrderDetail.fromJson(Map<String, dynamic> json) {
@@ -65,12 +134,15 @@ factory OrderDetail.fromJson(Map<String, dynamic> json) {
 
   return OrderDetail(
     orderId: json['order_id'] ?? '',
+    razorpayOrderId: json['razorpay_order_id'],
     amount: json['amount'] ?? 0,
+    currency: json['currency'] ?? 'INR',
     status: json['status'] ?? 'unknown',
     paymentId: json['payment_id'],
     signature: json['signature'],
     createdAt: parseTimestamp(json['created_at']),
-    updatedAt: json['updated_at'] != null ? parseTimestamp(json['updated_at']) : null,
+    updatedAt: parseTimestamp(json['updated_at']),
+    isSynced: json['is_synced'] ?? false,
     customerName: json['customer_name'],
     customerEmail: json['customer_email'],
     customerPhone: json['customer_phone'],

@@ -276,6 +276,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Simulate verification response with empty status string
@@ -312,6 +313,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Simulate verification response with explicit null status
@@ -349,7 +351,7 @@ void main() {
         paymentId: null,
         signature: null,
         createdAt: 1234567890,
-        updatedAt: null,
+        updatedAt: 1234567890,
         customerName: null,
         customerEmail: null,
         customerPhone: null,
@@ -376,10 +378,13 @@ void main() {
       // Verify null fields remain null
       expect(updatedOrder.paymentId, isNull);
       expect(updatedOrder.signature, isNull);
-      expect(updatedOrder.updatedAt, isNull);
       expect(updatedOrder.customerName, isNull);
       expect(updatedOrder.customerEmail, isNull);
       expect(updatedOrder.customerPhone, isNull);
+      
+      // Verify required fields are preserved
+      expect(updatedOrder.updatedAt, equals(1234567890));
+      expect(updatedOrder.createdAt, equals(1234567890));
       
       // Verify status was updated
       expect(updatedOrder.status, equals('paid'));
@@ -408,12 +413,15 @@ void main() {
       
       return OrderDetail(
         orderId: 'order_${generateRandomString(10)}',
+        razorpayOrderId: random.nextBool() ? 'rzp_order_${generateRandomString(10)}' : null,
         amount: random.nextInt(1000000) + 1000, // 1000 to 1000000 paise
+        currency: 'INR',
         status: statuses[random.nextInt(statuses.length)],
         paymentId: random.nextBool() ? 'pay_${generateRandomString(10)}' : null,
         signature: random.nextBool() ? 'sig_${generateRandomString(20)}' : null,
         createdAt: random.nextInt(1700000000) + 1600000000, // Random timestamp
-        updatedAt: random.nextBool() ? random.nextInt(1700000000) + 1600000000 : null,
+        updatedAt: random.nextInt(1700000000) + 1600000000, // Now required
+        isSynced: random.nextBool(),
         customerName: random.nextBool() ? 'Customer ${generateRandomString(5)}' : null,
         customerEmail: random.nextBool() ? '${generateRandomString(8)}@example.com' : null,
         customerPhone: generatePhoneNumber(),
@@ -722,7 +730,7 @@ void main() {
           paymentId: random.nextBool() ? null : baseOrder.paymentId,
           signature: random.nextBool() ? null : baseOrder.signature,
           createdAt: baseOrder.createdAt,
-          updatedAt: random.nextBool() ? null : baseOrder.updatedAt,
+          updatedAt: baseOrder.updatedAt,
           customerName: random.nextBool() ? null : baseOrder.customerName,
           customerEmail: random.nextBool() ? null : baseOrder.customerEmail,
           customerPhone: random.nextBool() ? null : baseOrder.customerPhone,
@@ -784,6 +792,7 @@ void main() {
           amount: 999999999,
           status: 'created',
           createdAt: 2147483647, // Max 32-bit int
+          updatedAt: 2147483647,
         ),
         // Very small amount
         OrderDetail(
@@ -791,6 +800,7 @@ void main() {
           amount: 1,
           status: 'created',
           createdAt: 0,
+          updatedAt: 0,
         ),
         // Very long strings
         OrderDetail(
@@ -800,6 +810,7 @@ void main() {
           paymentId: 'pay_${'y' * 100}',
           signature: 'sig_${'z' * 200}',
           createdAt: 1234567890,
+          updatedAt: 1234567890,
           customerName: 'Name ${'a' * 100}',
           customerEmail: '${'b' * 50}@example.com',
           customerPhone: '9' * 15,
@@ -810,6 +821,7 @@ void main() {
           amount: 50000,
           status: 'created',
           createdAt: 1234567890,
+          updatedAt: 1234567890,
           customerName: 'Name with émojis 🎉',
           customerEmail: 'test+special@example.com',
         ),
@@ -897,12 +909,15 @@ void main() {
       
       return OrderDetail(
         orderId: 'order_${generateRandomString(10)}',
+        razorpayOrderId: random.nextBool() ? 'rzp_order_${generateRandomString(10)}' : null,
         amount: random.nextInt(1000000) + 1000, // 1000 to 1000000 paise
+        currency: 'INR',
         status: status,
         paymentId: random.nextBool() ? 'pay_${generateRandomString(10)}' : null,
         signature: random.nextBool() ? 'sig_${generateRandomString(20)}' : null,
         createdAt: random.nextInt(1700000000) + 1600000000, // Random timestamp
-        updatedAt: random.nextBool() ? random.nextInt(1700000000) + 1600000000 : null,
+        updatedAt: random.nextInt(1700000000) + 1600000000,
+        isSynced: random.nextBool(),
         customerName: random.nextBool() ? 'Customer ${generateRandomString(5)}' : null,
         customerEmail: random.nextBool() ? '${generateRandomString(8)}@example.com' : null,
         customerPhone: generatePhoneNumber(),
@@ -1096,12 +1111,15 @@ void main() {
       
       return OrderDetail(
         orderId: 'order_${generateRandomString(10)}',
+        razorpayOrderId: random.nextBool() ? 'rzp_order_${generateRandomString(10)}' : null,
         amount: random.nextInt(1000000) + 1000, // 1000 to 1000000 paise
+        currency: 'INR',
         status: needsActionStatuses[random.nextInt(needsActionStatuses.length)],
         paymentId: random.nextBool() ? 'pay_${generateRandomString(10)}' : null,
         signature: random.nextBool() ? 'sig_${generateRandomString(20)}' : null,
         createdAt: random.nextInt(1700000000) + 1600000000, // Random timestamp
-        updatedAt: random.nextBool() ? random.nextInt(1700000000) + 1600000000 : null,
+        updatedAt: random.nextInt(1700000000) + 1600000000,
+        isSynced: random.nextBool(),
         customerName: random.nextBool() ? 'Customer ${generateRandomString(5)}' : null,
         customerEmail: random.nextBool() ? '${generateRandomString(8)}@example.com' : null,
         customerPhone: generatePhoneNumber(),
@@ -1216,6 +1234,7 @@ void main() {
           paymentId: 'pay_${generateRandomString(10)}',
           signature: 'sig_${generateRandomString(20)}',
           createdAt: random.nextInt(1700000000) + 1600000000,
+          updatedAt: random.nextInt(1700000000) + 1600000000,
         );
         
         // Verify the property: needsAction should be false
@@ -1259,6 +1278,7 @@ void main() {
             paymentId: random.nextBool() ? 'pay_${generateRandomString(10)}' : null,
             signature: random.nextBool() ? 'sig_${generateRandomString(20)}' : null,
             createdAt: random.nextInt(1700000000) + 1600000000,
+            updatedAt: random.nextInt(1700000000) + 1600000000,
           );
           
           // Determine expected behavior
@@ -1306,6 +1326,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Verify the logic: retry button should be hidden when status is 'paid'
@@ -1328,6 +1349,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Verify the logic: retry button should be shown when status is 'created'
@@ -1349,6 +1371,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Verify the logic: retry button should be shown when status is 'failed'
@@ -1370,6 +1393,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Verify the logic: retry button should be hidden when status is 'captured'
@@ -1391,6 +1415,7 @@ void main() {
         paymentId: 'pay_123',
         signature: 'sig_123',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
 
       // Verify the logic: retry button should be hidden when status is 'verified'
@@ -1423,6 +1448,7 @@ void main() {
           paymentId: 'pay_123',
           signature: 'sig_123',
           createdAt: 1234567890,
+          updatedAt: 1234567890,
         );
 
         expect(
@@ -1477,6 +1503,7 @@ void main() {
           paymentId: 'pay_123',
           signature: 'sig_123',
           createdAt: 1234567890,
+          updatedAt: 1234567890,
         );
 
         final needsAction = orderDetail.needsAction;
@@ -1515,6 +1542,7 @@ void main() {
           paymentId: 'pay_123',
           signature: 'sig_123',
           createdAt: 1234567890,
+          updatedAt: 1234567890,
         );
 
         // Verify needsAction is true (which means action buttons section is visible)
@@ -1538,6 +1566,7 @@ void main() {
           paymentId: 'pay_123',
           signature: 'sig_123',
           createdAt: 1234567890,
+          updatedAt: 1234567890,
         );
 
         // Verify needsAction is false (which means entire action buttons section is hidden)
@@ -1687,6 +1716,7 @@ void main() {
         paymentId: 'pay_multi',
         signature: 'sig_multi',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
       
       // Verify initial state
@@ -1704,6 +1734,7 @@ void main() {
         paymentId: currentOrder.paymentId,
         signature: currentOrder.signature,
         createdAt: currentOrder.createdAt,
+        updatedAt: currentOrder.updatedAt,
       );
       
       expect(currentOrder.status, equals('authorized'));
@@ -1720,6 +1751,7 @@ void main() {
         paymentId: currentOrder.paymentId,
         signature: currentOrder.signature,
         createdAt: currentOrder.createdAt,
+        updatedAt: currentOrder.updatedAt,
       );
       
       expect(currentOrder.status, equals('captured'));
@@ -1736,6 +1768,7 @@ void main() {
         paymentId: currentOrder.paymentId,
         signature: currentOrder.signature,
         createdAt: currentOrder.createdAt,
+        updatedAt: currentOrder.updatedAt,
       );
       
       expect(currentOrder.status, equals('paid'));
@@ -1762,6 +1795,7 @@ void main() {
         paymentId: 'pay_failed',
         signature: 'sig_failed',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
       
       // Verify initial state: retry button should be visible
@@ -1780,6 +1814,7 @@ void main() {
         paymentId: currentOrder.paymentId,
         signature: currentOrder.signature,
         createdAt: currentOrder.createdAt,
+        updatedAt: currentOrder.updatedAt,
       );
       
       // Verify failed state: retry button should still be visible
@@ -1800,6 +1835,7 @@ void main() {
         paymentId: currentOrder.paymentId,
         signature: currentOrder.signature,
         createdAt: currentOrder.createdAt,
+        updatedAt: currentOrder.updatedAt,
       );
       
       // Verify successful state: retry button should be hidden
@@ -1882,6 +1918,7 @@ void main() {
         amount: 1000,
         status: 'created',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
       
       expect(order.needsAction, isTrue);
@@ -1894,6 +1931,7 @@ void main() {
         amount: order.amount,
         status: response['status'] as String,
         createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
       );
       
       expect(order.status, equals('paid'));
@@ -1961,6 +1999,7 @@ void main() {
         amount: 50000,
         status: 'created',
         createdAt: 1234567890,
+        updatedAt: 1234567890,
       );
       
       final responseWithoutStatus = <String, dynamic>{'success': true, 'message': 'Verified'};
@@ -1973,6 +2012,7 @@ void main() {
           amount: order.amount,
           status: updatedStatus,
           createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
         );
       }
       
