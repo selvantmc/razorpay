@@ -252,4 +252,53 @@ class LocalNotificationService {
     final amountInRupees = amountInPaise / 100;
     return '₹${amountInRupees.toStringAsFixed(2)}';
   }
+
+  /// Show notification for delivery updates
+  ///
+  /// Always shows regardless of app foreground state to ensure
+  /// delivery updates are visible to the user.
+  ///
+  /// [title] - Notification title
+  /// [body] - Notification body text
+  /// [orderId] - Order ID for payload
+  Future<void> showDeliveryNotification({
+    required String title,
+    required String body,
+    required String orderId,
+  }) async {
+    if (!_isInitialized) {
+      debugPrint('Cannot show notification: service not initialized');
+      return;
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      'payment_updates',
+      'Payment Updates',
+      channelDescription: 'Notifications for payment status changes',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notificationsPlugin.show(
+      orderId.hashCode + 1000, // Use orderId hash + offset as notification ID
+      title,
+      body,
+      notificationDetails,
+      payload: orderId,
+    );
+
+    debugPrint('Showed delivery notification for order: $orderId');
+  }
 }

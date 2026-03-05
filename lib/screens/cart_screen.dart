@@ -7,6 +7,7 @@ import '../features/payment/services/subscription_service.dart';
 import '../features/payment/services/local_storage_service.dart';
 import '../features/payment/services/local_notification_service.dart';
 import '../models/order_detail.dart';
+import '../services/device_service.dart';
 
 class CartScreen extends StatefulWidget {
   final Cart cart;
@@ -144,7 +145,13 @@ class _CartScreenState extends State<CartScreen> {
 
     try {
       // Create order with items total only (not including fees)
-      final orderData = await PaymentApi.createOrder(widget.cart.grandTotal);
+      final orderData = await PaymentApi.createOrderWithDetails(
+        amount: widget.cart.grandTotal,
+        deviceId: await DeviceService.getDeviceId(),
+        deliveryLat: widget.location.latitude,
+        deliveryLng: widget.location.longitude,
+        deliveryAddress: widget.location.fullAddress,
+      );
       _currentOrderId = orderData['orderId'] as String;
       
       // Store order details from API response

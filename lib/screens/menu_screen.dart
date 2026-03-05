@@ -5,6 +5,8 @@ import '../models/cart.dart';
 import '../services/location_service.dart';
 import 'location_screen.dart';
 import 'cart_screen.dart';
+import 'my_orders_screen.dart';
+import 'delivery_partner_screen.dart';
 
 class MenuScreen extends StatefulWidget {
   final DeliveryLocation location;
@@ -113,6 +115,16 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
             SliverAppBar(
               expandedHeight: 120,
               pinned: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.receipt_long, color: Colors.white),
+                  tooltip: 'My Orders',
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
+                  ),
+                ),
+              ],
               flexibleSpace: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -162,14 +174,24 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                             ],
                           ),
                           const Spacer(),
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 16),
-                            child: Text(
-                              '🍽️ Nourisha',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: GestureDetector(
+                              onLongPress: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const DeliveryPartnerScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                '🍽️ Nourisha',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),

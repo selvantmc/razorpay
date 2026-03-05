@@ -3,11 +3,19 @@ import 'dart:convert';
 import 'package:amplify_api/amplify_api.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 
+/// Service for managing delivery location subscriptions via AppSync GraphQL
+///
+/// Mirrors SubscriptionService structure but for delivery updates.
+/// Key differences:
+/// - No LocalStorageService or LocalNotificationService dependencies
+/// - Subscribes to onDeliveryUpdated instead of onOrderUpdated
+/// - No auto-cancel on final status
+/// - Just parses and pushes to stream
 class DeliverySubscriptionService {
   final Map<String, StreamSubscription<GraphQLResponse<String>>>
       _activeSubscriptions = {};
 
-  // StreamController broadcasts updates to any listener on the main thread
+  // StreamController broadcasts delivery updates to any listener
   final _deliveryController = StreamController<Map<String, dynamic>>.broadcast();
 
   // Public stream — screens listen to this
@@ -56,7 +64,7 @@ class DeliverySubscriptionService {
         );
 
         final subscription = operation.listen(
-          (event) => _handleDeliveryUpdate(orderId, event),
+          (event) => _handleSubscriptionUpdate(orderId, event),
           onError: (error) {
             print('DeliverySubscriptionService: Error for $orderId: $error');
           },
@@ -83,7 +91,7 @@ class DeliverySubscriptionService {
     }
   }
 
-  Future<void> _handleDeliveryUpdate(
+  Future<void> _handleSubscriptionUpdate(
     String orderId,
     GraphQLResponse<String> event,
   ) async {
@@ -113,7 +121,7 @@ class DeliverySubscriptionService {
 
       print('🚴 Delivery update: status=${deliveryJson['delivery_status']}, lat=${deliveryJson['delivery_lat']}, lng=${deliveryJson['delivery_lng']}');
 
-      // Push to StreamController — this reaches UI thread safely
+      // Push to StreamController
       if (!_deliveryController.isClosed) {
         _deliveryController.add(deliveryJson);
         print('DeliverySubscriptionService: Event pushed to stream ✅');
