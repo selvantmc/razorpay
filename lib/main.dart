@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:amplify_api/amplify_api.dart';
-import 'package:hive_flutter/hive_flutter.dart';          // ← ADD
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'amplifyconfiguration.dart';
 import 'main_scaffold.dart';
 import 'features/payment/services/local_storage_service.dart';
 import 'features/payment/services/subscription_service.dart';
 import 'features/payment/services/local_notification_service.dart';
-import 'models/order_detail.dart';                        // ← ADD
+import 'models/order_detail.dart';
+import 'models/delivery_location.dart';
+import 'services/location_service.dart';
+import 'screens/location_screen.dart';
+import 'screens/menu_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +49,11 @@ void main() async {
     }
   }
 
-  runApp(const MyApp());
+  // Check for saved delivery location
+  final locationService = LocationService();
+  final savedLocation = await locationService.getSavedLocation();
+
+  runApp(MyApp(savedLocation: savedLocation));
 }
 
 Future<void> _configureAmplify() async {
@@ -61,7 +69,9 @@ Future<void> _configureAmplify() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final DeliveryLocation? savedLocation;
+
+  const MyApp({super.key, this.savedLocation});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +81,9 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
         useMaterial3: true,
       ),
-      home: const MainScaffold(),
+      home: savedLocation != null
+          ? MenuScreen(location: savedLocation!)
+          : const LocationScreen(),
     );
   }
 }

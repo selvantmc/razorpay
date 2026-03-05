@@ -23,6 +23,8 @@ dependencies:
   flutter_local_notifications: ^17.0.0
   amplify_api: ^2.0.0
   amplify_flutter: ^2.0.0
+  geolocator: ^13.0.0
+  geocoding: ^3.0.0
 
 dev_dependencies:
   flutter_test:
